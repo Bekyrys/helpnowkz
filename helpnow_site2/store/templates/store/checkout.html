@@ -9,19 +9,18 @@
 <div class="row">
     <div class="col-lg-6">
         <div class="box-element" id="form-wrapper">
+            {% if request.user.is_authenticated %}
             <form id="form">
                 {% csrf_token %}
                 <div class="user-info">
                     <div class="form-field">
                         <input type="text" name="name" placeholder="Имя Фамилия:" class="form-control">
                     </div>
-
                     <div class="form-field">
                         <input type="tel" name="number" placeholder="Номер телефона:" class="form-control">
                     </div>
                     <!-- pattern="[0-9]{3}-[0-9]{3}-[0-9]{4}" -->
                 </div>
-
                 <div class="shipping-info">
                     <div class="form-field">
                         <input type="text" name="address" placeholder="Адрес:" class="form-control">
@@ -29,19 +28,24 @@
                     <div class="form-field">
                         <input type="text" name="comment" placeholder="Комментарии:" class="form-control">
                     </div>
-                    <input type="hidden" name="itemName" id="item-name" value="{{ items|join:", " }}">
+                    <input type="hidden" name="itemName" id="item-name" value="{{ items|join:', ' }}">
                     <input type="hidden" name="itemQuantity" id="item-quantity" value="">
+                    <div id="product-data" style="display: none;">
+                        {{ product_data | safe }}
+                    </div>
                 </div>
                 <hr>
                 <input id="form-button" class="btn btn-success btn-block" type="submit" value="Продолжить">
             </form>
+            {% else %}
+            <p>Для оформления заказа авторизируйтесь.</p>
+            {% endif %}
         </div>
         <br>
         <div class="box-element hidden" id="payment-info">
-            <small>Ожидайте звонка</button> </small>
+            <small>Ожидайте звонка</small>
         </div>
     </div>
-
     <div class="col-lg-6">
         <div class="box-element">
             <a class="btn btn-outline-dark" href="{% url 'cart' %}">&#x2190; К заказу</a>
@@ -56,13 +60,15 @@
                 <div style="flex:1"><p>x{{ item.quantity }}</p></div>
             </div>
             {% endfor %}
-
             <h5>Товар(ов): {{ order.get_cart_items }}</h5>
             <h5>Общая сумма: {{ order.get_cart_total|floatformat:0 }} ₸</h5>
         </div>
     </div>
     <br>
+
 </div>
+
+
 
 <script type="text/javascript">
     document.addEventListener("DOMContentLoaded", function() {
@@ -70,29 +76,43 @@
     var itemNameInput = document.getElementById('item-name');
     var itemQuantityInput = document.getElementById('item-quantity');
     var items = document.querySelectorAll('.cart-row');
-
+    
     var itemNames = [];
     var itemQuantities = [];
 
     items.forEach(function(item) {
-        var itemName = item.querySelector('p:first-child').textContent;
-        var itemQuantity = parseInt(item.querySelector('p:last-child').textContent.replace('x', ''), 10); // Преобразуем текст в число
-        itemNames.push(itemName);
-        itemQuantities.push(itemQuantity);
+        var itemNameElement = item.querySelector('div:nth-child(2) p');
+        var itemQuantityElement = item.querySelector('div:nth-child(4) p');
+
+        if (itemNameElement && itemQuantityElement) {
+            var itemName = itemNameElement.textContent.trim();
+            var itemQuantity = parseInt(itemQuantityElement.textContent.replace('x', '').trim(), 10);
+
+            if (!isNaN(itemQuantity)) {
+                itemNames.push(itemName);
+                itemQuantities.push(itemQuantity);
+
+                console.log("Item Name:", itemName);
+                console.log("Item Quantity:", itemQuantity);
+            } else {
+                console.log("Invalid quantity for item:", itemName);
+            }
+        }
     });
 
-    // Создаем массив строк вида "Наименование (xКоличество)"
     var formattedItemNames = itemNames.map(function(item, index) {
         return item + ' (x' + itemQuantities[index] + ')';
     });
 
     itemNameInput.value = formattedItemNames.join(", ");
-    itemQuantityInput.value = itemQuantities.join(", ");
+    itemQuantityInput.value = itemQuantities.reduce(function(a, b) {
+        return a + b;
+    }, 0);
 
     form.addEventListener('submit', function(e){
         e.preventDefault();
         console.log('Form submitted..');
-
+        
         var userFormData = {
             'name': form.querySelector('input[name="name"]').value,
             'number': form.querySelector('input[name="number"]').value,
@@ -103,19 +123,20 @@
 
         var shippingInfo = {
             'address': form.querySelector('input[name="address"]').value,
-            'comment': form.querySelector('input[name="comment"]').value
+            'comment': form.querySelector('input[name="comment"]').value,
+            'tel_number': form.querySelector('input[name="number"]').value  // Добавляем номер телефона в shippingInfo
         };
 
         console.log('Shipping Info', shippingInfo);
         console.log('User Info', userFormData);
 
         var url = '/process_order/';
-        
+
         fetch(url, {
             method:'POST',
             headers:{
                 'Content-Type':'application/json',
-                'X-CSRFToken': csrftoken
+                'X-CSRFToken': getCookie('csrftoken')
             },
             body:JSON.stringify({'form':userFormData,'shipping':shippingInfo})
         })
@@ -136,6 +157,22 @@
 
     function submitFormData(){
         console.log('Continue button clicked');
+    }
+
+    // Функция для получения значения cookie
+    function getCookie(name) {
+        var cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            var cookies = document.cookie.split(';');
+            for (var i = 0; i < cookies.length; i++) {
+                var cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
     }
 });
 
@@ -143,153 +180,6 @@
 
 
 
-
-
-<!--Измененные
-    <script type="text/javascript">
-    document.addEventListener("DOMContentLoaded", function() {
-    var form = document.querySelector('.box-element form');
-    var itemNameInput = document.getElementById('item-name');
-    var itemQuantityInput = document.getElementById('item-quantity');
-    var items = document.querySelectorAll('.cart-row');
-
-    var itemNames = [];
-    var itemQuantities = [];
-
-    items.forEach(function(item) {
-        var itemName = item.querySelector('p:first-child').textContent;
-        var itemQuantity = parseInt(item.querySelector('p:last-child').textContent.replace('x', ''), 10); // Преобразуем текст в число
-        itemNames.push(itemName);
-        itemQuantities.push(itemQuantity);
-    });
-
-    // Создаем массив строк вида "Наименование (xКоличество)"
-    var formattedItemNames = itemNames.map(function(item, index) {
-        return item + ' (x' + itemQuantities[index] + ')';
-    });
-
-    itemNameInput.value = formattedItemNames.join(", ");
-    itemQuantityInput.value = itemQuantities.join(", ");
-
-    form.addEventListener('submit', function(e){
-        e.preventDefault();
-        console.log('Form submitted..');
-
-        var userFormData = {
-            'name': form.querySelector('input[name="name"]').value,
-            'number': form.querySelector('input[name="number"]').value,
-            'total': '{{ order.get_cart_total |floatformat:0 }}',
-            'itemName': itemNameInput.value,
-            'itemQuantity': itemQuantityInput.value
-        };
-
-        var shippingInfo = {
-            'address': form.querySelector('input[name="address"]').value,
-            'comment': form.querySelector('input[name="comment"]').value
-        };
-
-        console.log('Shipping Info', shippingInfo);
-        console.log('User Info', userFormData);
-
-        var url = '/process_order/';
-        
-        fetch(url, {
-            method:'POST',
-            headers:{
-                'Content-Type':'application/json',
-                'X-CSRFToken': csrftoken
-            },
-            body:JSON.stringify({'form':userFormData,'shipping':shippingInfo})
-        })
-        .then((response) => response.json())
-        .then((data) =>{
-            console.log('Success:', data);
-            alert('Запрос принят');
-            window.location.href="{% url 'store' %}";
-        });
-
-        document.getElementById('form-button').classList.add('hidden');
-        document.getElementById('payment-info').classList.remove('hidden');
-    });
-
-    document.getElementById('form-button').addEventListener('click', function(e){   
-        submitFormData();
-    });
-
-    function submitFormData(){
-        console.log('Continue button clicked');
-    }
-});
-
-
-</script> -->
-
-
-<!-- Изначальное 
-    <script type="text/javascript">
-    document.addEventListener("DOMContentLoaded", function() {
-        var shipping = '{{ order.shipping }}';
-        var total = '{{ order.get_cart_total |floatformat:0}}';
-        var form = document.querySelector('.box-element form');
-
-        form.addEventListener('submit', function(e){
-            e.preventDefault();
-            console.log('Form submitted..');
-
-            var userFormData = {
-            'name': form.querySelector('input[name="name"]').value,
-            'number': form.querySelector('input[name="number"]').value,
-            'total': total
-            };
-
-
-            var shippingInfo = {
-                'address': null,
-                'comment': null,
-            };
-
-            console.log('Shipping Info', shippingInfo);
-            console.log('User Info', userFormData);
-
-            if(user == 'AnonymousUser'){
-                userFormData.name = form.name.value;
-                userFormData.number = form.number.value;
-            }
-
-            // Добавляем данные из полей адреса и комментария
-            shippingInfo.address = form.address.value;
-            shippingInfo.comment = form.comment.value;
-
-            var url = '/process_order/';
-            
-            fetch(url, {
-                method:'POST',
-                headers:{
-                    'Content-Type':'application/json',
-                    'X-CSRFToken': csrftoken
-                },
-                body:JSON.stringify({'form':userFormData,'shipping':shippingInfo})
-            })
-            .then((response) => response.json())
-            .then((data) =>{
-                console.log('Success:', data);
-                alert('Запрос принят');
-                window.location.href="{% url 'store' %}";
-            });
-
-            document.getElementById('form-button').classList.add('hidden');
-            document.getElementById('payment-info').classList.remove('hidden');
-        });
-
-        document.getElementById('form-button').addEventListener('click', function(e){   
-            submitFormData();
-        });
-
-        function submitFormData(){
-            console.log('Continue button clicked');
-        }
-    });
-</script> -->
 
 
 {% endblock content%}

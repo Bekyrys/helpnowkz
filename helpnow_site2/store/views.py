@@ -70,26 +70,27 @@ def updateItem(request):
 
     return JsonResponse('Item was added', safe=False)
 
-import json
-
-from django.http import JsonResponse
-
-# def processOrder(request):
-#     print('Data', request.POST)
-#     return JsonResponse('Complete', safe=False)
 
 def processOrder(request):
-    transaction_id = datetime.datetime.now().timestamp()
-    data = json.loads(request.body)
 
-    # # userFormData = data['userFormData']
-    # shippingInfo = data['shippingInfo']
+    if request.method == 'GET':
+        # Отправляем данные о продуктах в шаблон
+        products = [
+            {"name": "Product 1", "quantity": 2},
+            {"name": "Product 2", "quantity": 1},
+            # Добавьте остальные продукты здесь
+        ]
+        product_data = json.dumps(products)
+        return render(request, 'checkout.html', {'product_data': product_data})
 
-    # # print('userFormData:', userFormData)
-    # print('shippingInfo:', shippingInfo)
-
+    
 
     if request.user.is_authenticated:
+        
+        transaction_id = datetime.datetime.now().timestamp()
+        data = json.loads(request.body)
+
+
         custom = request.user.customer
         order, created = Order.objects.get_or_create(customer=custom, complete=False)
         total = float(data['form']['total'])
@@ -100,9 +101,11 @@ def processOrder(request):
         order.save()
 
         if order.shipping == True:
+            tel_number = data['shipping'].get('tel_number', '')  # Получаем tel_number из запроса или оставляем пустым, если его нет
             ShippingAddreess.objects.create(
                 customer=custom,
                 order=order,
+                tel_number=tel_number,  # Передаем tel_number в объект ShippingAddress
                 address=data['shipping']['address'],
                 comment=data['shipping']['comment']
             )

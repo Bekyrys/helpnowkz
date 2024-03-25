@@ -72,111 +72,144 @@
 
 <script type="text/javascript">
     document.addEventListener("DOMContentLoaded", function() {
-    var form = document.querySelector('.box-element form');
-    var itemNameInput = document.getElementById('item-name');
-    var itemQuantityInput = document.getElementById('item-quantity');
-    var items = document.querySelectorAll('.cart-row');
-    
-    var itemNames = [];
-    var itemQuantities = [];
+        var form = document.querySelector('.box-element form');
+        var itemNameInput = document.getElementById('item-name');
+        var itemQuantityInput = document.getElementById('item-quantity');
+        var items = document.querySelectorAll('.cart-row');
 
-    items.forEach(function(item) {
-        var itemNameElement = item.querySelector('div:nth-child(2) p');
-        var itemQuantityElement = item.querySelector('div:nth-child(4) p');
+        var itemNames = [];
+        var itemQuantities = [];
 
-        if (itemNameElement && itemQuantityElement) {
-            var itemName = itemNameElement.textContent.trim();
-            var itemQuantity = parseInt(itemQuantityElement.textContent.replace('x', '').trim(), 10);
+        items.forEach(function(item) {
+            var itemNameElement = item.querySelector('div:nth-child(2) p');
+            var itemQuantityElement = item.querySelector('div:nth-child(4) p');
 
-            if (!isNaN(itemQuantity)) {
-                itemNames.push(itemName);
-                itemQuantities.push(itemQuantity);
+            if (itemNameElement && itemQuantityElement) {
+                var itemName = itemNameElement.textContent.trim();
+                var itemQuantity = parseInt(itemQuantityElement.textContent.replace('x', '').trim(), 10);
 
-                console.log("Item Name:", itemName);
-                console.log("Item Quantity:", itemQuantity);
-            } else {
-                console.log("Invalid quantity for item:", itemName);
-            }
-        }
-    });
+                if (!isNaN(itemQuantity)) {
+                    itemNames.push(itemName);
+                    itemQuantities.push(itemQuantity);
 
-    var formattedItemNames = itemNames.map(function(item, index) {
-        return item + ' (x' + itemQuantities[index] + ')';
-    });
-
-    itemNameInput.value = formattedItemNames.join(", ");
-    itemQuantityInput.value = itemQuantities.reduce(function(a, b) {
-        return a + b;
-    }, 0);
-
-    form.addEventListener('submit', function(e){
-        e.preventDefault();
-        console.log('Form submitted..');
-        
-        var userFormData = {
-            'name': form.querySelector('input[name="name"]').value,
-            'number': form.querySelector('input[name="number"]').value,
-            'total': '{{ order.get_cart_total |floatformat:0 }}',
-            'itemName': itemNameInput.value,
-            'itemQuantity': itemQuantityInput.value
-        };
-
-        var shippingInfo = {
-            'address': form.querySelector('input[name="address"]').value,
-            'comment': form.querySelector('input[name="comment"]').value,
-            'tel_number': form.querySelector('input[name="number"]').value  // Добавляем номер телефона в shippingInfo
-        };
-
-        console.log('Shipping Info', shippingInfo);
-        console.log('User Info', userFormData);
-
-        var url = '/process_order/';
-
-        fetch(url, {
-            method:'POST',
-            headers:{
-                'Content-Type':'application/json',
-                'X-CSRFToken': getCookie('csrftoken')
-            },
-            body:JSON.stringify({'form':userFormData,'shipping':shippingInfo})
-        })
-        .then((response) => response.json())
-        .then((data) =>{
-            console.log('Success:', data);
-            alert('Запрос принят');
-            window.location.href="{% url 'store' %}";
-        });
-
-        document.getElementById('form-button').classList.add('hidden');
-        document.getElementById('payment-info').classList.remove('hidden');
-    });
-
-    document.getElementById('form-button').addEventListener('click', function(e){   
-        submitFormData();
-    });
-
-    function submitFormData(){
-        console.log('Continue button clicked');
-    }
-
-    // Функция для получения значения cookie
-    function getCookie(name) {
-        var cookieValue = null;
-        if (document.cookie && document.cookie !== '') {
-            var cookies = document.cookie.split(';');
-            for (var i = 0; i < cookies.length; i++) {
-                var cookie = cookies[i].trim();
-                if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                    break;
+                    console.log("Item Name:", itemName);
+                    console.log("Item Quantity:", itemQuantity);
+                } else {
+                    console.log("Invalid quantity for item:", itemName);
                 }
             }
-        }
-        return cookieValue;
-    }
-});
+        });
 
+        var formattedItemNames = itemNames.map(function(item, index) {
+            return item + ' (x' + itemQuantities[index] + ')';
+        });
+
+        itemNameInput.value = formattedItemNames.join(", ");
+        itemQuantityInput.value = itemQuantities.reduce(function(a, b) {
+            return a + b;
+        }, 0);
+
+        form.addEventListener('submit', function(e){
+            e.preventDefault();
+            console.log('Form submitted..');
+
+            var userFormData = {
+                'name': form.querySelector('input[name="name"]').value,
+                'number': form.querySelector('input[name="number"]').value,
+                'total': '{{ order.get_cart_total |floatformat:0 }}',
+                'itemName': itemNameInput.value,
+                'itemQuantity': itemQuantityInput.value, 
+                'orderitems': getOrderItemsData(),  // Добавляем информацию о заказанных товарах
+                'shippingaddress': getShippingAddressData()  // Добавляем информацию об адресе доставки
+            };
+
+            var shippingInfo = {
+                'address': form.querySelector('input[name="address"]').value,
+                'comment': form.querySelector('input[name="comment"]').value,
+                'tel_number': form.querySelector('input[name="number"]').value  // Добавляем номер телефона в shippingInfo
+            };
+
+            console.log('Shipping Info', shippingInfo);
+            console.log('User Info', userFormData);
+
+            var url = '/process_order/';
+
+            fetch(url, {
+                method:'POST',
+                headers:{
+                    'Content-Type':'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body:JSON.stringify({'form':userFormData,'shipping':shippingInfo})
+            })
+            .then((response) => response.json())
+            .then((data) =>{
+                console.log('Success:', data);
+                alert('Запрос принят');
+                window.location.href="{% url 'store' %}";
+            });
+
+            document.getElementById('form-button').classList.add('hidden');
+            document.getElementById('payment-info').classList.remove('hidden');
+        });
+
+        document.getElementById('form-button').addEventListener('click', function(e){   
+            submitFormData();
+        });
+
+        function submitFormData(){
+            console.log('Continue button clicked');
+        }
+
+        // Функция для получения значения cookie
+        function getCookie(name) {
+            var cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                var cookies = document.cookie.split(';');
+                for (var i = 0; i < cookies.length; i++) {
+                    var cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        function getOrderItemsData() {
+            var orderItemsData = [];
+            items.forEach(function(item) {
+                var itemNameElement = item.querySelector('div:nth-child(2) p');
+                var itemQuantityElement = item.querySelector('div:nth-child(4) p');
+
+                if (itemNameElement && itemQuantityElement) {
+                    var itemName = itemNameElement.textContent.trim();
+                    var itemQuantity = parseInt(itemQuantityElement.textContent.replace('x', '').trim(), 10);
+
+                    if (!isNaN(itemQuantity)) {
+                        orderItemsData.push({'name': itemName, 'quantity': itemQuantity});
+                    } else {
+                        console.log("Invalid quantity for item:", itemName);
+                    }
+                }
+            });
+
+            return orderItemsData;
+        }
+
+        function getShippingAddressData() {
+            var shippingAddressData = {
+                'address': form.querySelector('input[name="address"]').value,
+                'comment': form.querySelector('input[name="comment"]').value,
+                'tel_number': form.querySelector('input[name="number"]').value
+            };
+
+            return shippingAddressData;
+        }
+    });
 </script>
+
 
 
 

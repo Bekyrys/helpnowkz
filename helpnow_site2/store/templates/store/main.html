@@ -46,16 +46,13 @@ const csrftoken = getToken('csrftoken');
             <div class="container">
                 <ul class="header-social-container">
                     <li>
-                        <a href="{{ instagram_url }}" class="btn btn-warning" style="background-color: none;">Instagram</a>
+                        <a href="{% url 'instagram_redirect' %}" class="btn btn-warning" style="background-color: none;">Instagram</a>
                         <a href="" font-size="20px" class="btn btn-warning" style="background-color: green;">WhatsApp</a>
                     </li>
 
                 </ul>
-                <div class="header-user-action">
-                    <a href="" class="btn btn-warning">Регистрация</a>
-                    <a href="" class="btn btn-warning">Авторизация</a>
-                    <a href="{% url 'cart' %}"></a>
-                </div>
+
+                
             </div>
 
         </div>

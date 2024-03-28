@@ -5,11 +5,15 @@ from django.contrib.auth.models import User
 class Customer(models.Model):
     user = models.OneToOneField(User, null=True, blank=True, on_delete= models.CASCADE)
     name = models.CharField(max_length=200, null=True)
-    email = models.CharField(max_length=200)#вместо имейла 
+    email = models.CharField(max_length=200)
     number = models.CharField(max_length=200)
 
     def __str__ (self):
         return self.name
+    
+    # class Meta:
+    #     verbose_name = 'Клиент'  # Название модели в единственном числе
+    #     verbose_name_plural = 'Клиенты'  # Название модели во множественном числе
     
 class Product(models.Model):
     name = models.CharField(max_length= 200)
@@ -27,6 +31,12 @@ class Product(models.Model):
         except:
             url = 'images/placeholder.png'
         return url
+    
+    # class Meta:
+    #     verbose_name = 'Товар'  # Название модели в единственном числе
+    #     verbose_name_plural = 'Товары'  # Название модели во множественном числе
+
+
 
 
 class Order(models.Model):
@@ -59,6 +69,13 @@ class Order(models.Model):
                     shipping = True
             return shipping
         
+        # class Meta:
+        #     verbose_name = 'Заказ'  # Название модели в единственном числе
+        #     verbose_name_plural = 'Заказы'  # Название модели во множественном числе
+        
+        
+        
+        
 
         
         
@@ -69,12 +86,21 @@ class OrderItem(models.Model):
     date_added = models.DateTimeField(auto_now_add=True)
     
     def __str__(self):
-        return self.product.name 
+        if self.product:
+            return self.product.name
+        else:
+            return "No product"
     
+
     @property
     def get_total(self):
         total = self.product.price * self.quantity
         return total
+    
+    # class Meta:
+    #         verbose_name = 'Товар заказа'  # Название модели в единственном числе
+    #         verbose_name_plural = 'Товар заказов'  # Название модели во множественном числе
+    
     
     
 
@@ -88,3 +114,7 @@ class ShippingAddreess(models.Model):
 
     def __str__(self):
         return self.address
+    
+    # class Meta:
+    #     verbose_name = 'Адрес доставки'  # Название модели в единственном числе
+    #     verbose_name_plural = 'Адреса доставки'  # Название модели во множественном числе

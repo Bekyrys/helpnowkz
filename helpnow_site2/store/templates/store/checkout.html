@@ -9,7 +9,7 @@
 <div class="row">
     <div class="col-lg-6">
         <div class="box-element" id="form-wrapper">
-            {% if request.user.is_authenticated %}
+            <!-- {% if request.user.is_authenticated %} -->
             <form id="form">
                 {% csrf_token %}
                 <div class="user-info">
@@ -37,9 +37,9 @@
                 <hr>
                 <input id="form-button" class="btn btn-success btn-block" type="submit" value="Продолжить">
             </form>
-            {% else %}
+            <!-- {% else %}
             <p>Для оформления заказа авторизируйтесь.</p>
-            {% endif %}
+            {% endif %} -->
         </div>
         <br>
         <div class="box-element hidden" id="payment-info">
